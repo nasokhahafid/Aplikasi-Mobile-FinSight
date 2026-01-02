@@ -48,18 +48,15 @@ class DashboardController extends Controller
     }
     private function calculateProfit($date)
     {
-        // Revenue (Real sales amount)
-        $revenue = Transaction::where('date', '>=', $date)->sum('total_amount');
+        // Opsi 1: Hitung Real Profit dari Database (Per Item)
+        // Profit = Total (Harga Jual per item - Harga Beli per item) * Quantity
 
-        // Cost of Goods Sold (Modal)
-        // Filter items based on the SAME transaction query logic
-        $cogs = \App\Models\TransactionItem::whereHas('transaction', function ($query) use ($date) {
-            $query->where('date', '>=', $date);
-        })->get()->sum(function ($item) {
-            return $item->buy_price * $item->quantity;
-        });
+        // Menggunakan query Builder untuk performa & akurasi
+        $realProfit = \Illuminate\Support\Facades\DB::table('transaction_items')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->where('transactions.date', '>=', $date)
+            ->sum(\Illuminate\Support\Facades\DB::raw('(transaction_items.price - transaction_items.buy_price) * transaction_items.quantity'));
 
-        // Net Profit = Revenue - Cost
-        return $revenue - $cogs;
+        return $realProfit;
     }
 }

@@ -11,6 +11,13 @@ class TransactionItem extends Model
 
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'buy_price' => 'decimal:2',
+        'quantity' => 'integer',
+        'price' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+    ];
+
     public function product()
     {
         return $this->belongsTo(Product::class);
