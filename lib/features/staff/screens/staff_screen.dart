@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../core/models/user_model.dart';
-import '../../../core/providers/dashboard_provider.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/models/user_model.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
 
 class StaffScreen extends StatelessWidget {
   const StaffScreen({super.key});

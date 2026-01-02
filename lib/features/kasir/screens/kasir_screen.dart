@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../core/models/product_model.dart';
-import '../../../core/models/transaction_model.dart';
-import '../../../core/providers/dashboard_provider.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../shared/widgets/custom_search_bar.dart';
-import '../../../shared/widgets/product_card.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/models/product_model.dart';
+import 'package:finsight/core/models/transaction_model.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
+import 'package:finsight/core/utils/currency_formatter.dart';
+import 'package:finsight/shared/widgets/custom_search_bar.dart';
+import 'package:finsight/shared/widgets/product_card.dart';
+import 'package:finsight/core/services/printer_service.dart';
 
 class KasirScreen extends StatefulWidget {
   const KasirScreen({super.key});
@@ -83,6 +85,57 @@ class _KasirScreenState extends State<KasirScreen> {
 
   int get _totalItems {
     return _cart.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  void _openScanner() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            AppBar(
+              title: const Text('Scan Barcode Produk'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            Expanded(
+              child: MobileScanner(
+                onDetect: (capture) {
+                  final List<Barcode> barcodes = capture.barcodes;
+                  if (barcodes.isNotEmpty) {
+                    final String code = barcodes.first.rawValue ?? '';
+                    final service = Provider.of<DashboardProvider>(
+                      context,
+                      listen: false,
+                    );
+                    try {
+                      final product = service.products.firstWhere(
+                        (p) => p.sku == code,
+                      );
+
+                      _addToCart(product);
+                      Navigator.pop(context);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Produk tidak ditemukan!'),
+                          backgroundColor: AppColors.error,
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showCart() {
@@ -501,7 +554,7 @@ class _KasirScreenState extends State<KasirScreen> {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
-                          _simulatePrintingProcess();
+                          _printReceipt(transaction);
                         },
                         icon: const Icon(Icons.print),
                         label: const Text('Cetak Sekarang'),
@@ -522,35 +575,67 @@ class _KasirScreenState extends State<KasirScreen> {
     );
   }
 
-  void _simulatePrintingProcess() {
+  Future<void> _printReceipt(TransactionModel transaction) async {
+    // Show Loading
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        Future.delayed(const Duration(seconds: 2), () {
-          if (context.mounted) {
-            Navigator.pop(context); // Close loading
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('Struk berhasil dicetak ke printer thermal'),
-                  ],
-                ),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-              ),
-            );
-          }
-        });
-        return const Center(child: CircularProgressIndicator());
-      },
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      final printer = PrinterService();
+      final devices = await printer.getDevices();
+
+      if (devices.isEmpty) {
+        if (mounted) Navigator.pop(context); // Close loading
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tidak ada printer terhubung!'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Auto connect to first device for now
+      // In production, should show picker
+      await printer.connect(devices.first);
+      await printer.printReceipt(transaction);
+
+      if (mounted) Navigator.pop(context); // Close loading
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Struk berhasil dicetak'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mencetak: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -628,6 +713,7 @@ class _KasirScreenState extends State<KasirScreen> {
                 CustomSearchBar(
                   hintText: 'Cari produk...',
                   onChanged: (value) => setState(() => _searchQuery = value),
+                  onScannerPressed: _openScanner,
                 ),
 
                 const SizedBox(height: AppSpacing.md),

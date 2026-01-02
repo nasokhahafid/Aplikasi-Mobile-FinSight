@@ -3,8 +3,13 @@ import 'product_model.dart';
 class TransactionItem {
   final Product product;
   int quantity;
+  final double buyPrice; // Snapshot modal/harga beli saat transaksi
 
-  TransactionItem({required this.product, this.quantity = 1});
+  TransactionItem({
+    required this.product,
+    this.quantity = 1,
+    this.buyPrice = 0,
+  });
 
   double get total => product.price * quantity;
 }
@@ -44,7 +49,11 @@ class TransactionModel {
         );
       }
 
-      return TransactionItem(product: product, quantity: i['quantity'] ?? 0);
+      return TransactionItem(
+        product: product,
+        quantity: i['quantity'] ?? 0,
+        buyPrice: double.tryParse(i['buy_price']?.toString() ?? '0') ?? 0.0,
+      );
     }).toList();
 
     return TransactionModel(

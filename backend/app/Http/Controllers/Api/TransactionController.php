@@ -56,6 +56,7 @@ class TransactionController extends Controller
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
                     'price' => $product->price,
+                    'buy_price' => $product->purchase_price ?? 0, // Snapshot current purchase price
                     'subtotal' => $product->price * $item['quantity'],
                 ]);
 

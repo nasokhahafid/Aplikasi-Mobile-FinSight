@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../../core/constants/app_design_system.dart';
-import '../../core/utils/currency_formatter.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/utils/currency_formatter.dart';
 
 // Circular Menu Card Widget
 class CircularMenuCard extends StatelessWidget {
@@ -38,7 +38,7 @@ class CircularMenuCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: gradient.colors.first.withOpacity(0.3),
+                    color: gradient.colors.first.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -303,8 +303,8 @@ class SalesChartWidget extends StatelessWidget {
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primary.withOpacity(0.2),
-                          AppColors.primary.withOpacity(0.0),
+                          AppColors.primary.withValues(alpha: 0.2),
+                          AppColors.primary.withValues(alpha: 0.0),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,

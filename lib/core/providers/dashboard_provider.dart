@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../models/product_model.dart';
-import '../models/transaction_model.dart';
-import '../models/category_model.dart';
-import '../models/notification_model.dart';
-import '../models/user_model.dart';
-import '../services/api_service.dart';
+import 'package:finsight/core/models/product_model.dart';
+import 'package:finsight/core/models/transaction_model.dart';
+import 'package:finsight/core/models/category_model.dart';
+import 'package:finsight/core/models/notification_model.dart';
+import 'package:finsight/core/models/user_model.dart';
+import 'package:finsight/core/services/api_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
   final ApiService _api = ApiService();
@@ -16,7 +16,12 @@ class DashboardProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _chartData = [];
   List<NotificationModel> _notifications = [];
   List<UserModel> _staff = [];
+  List<Map<String, dynamic>> _restockHistory = [];
+  Map<String, dynamic> _appSettings = {};
   bool _isLoading = false;
+  double _profitToday = 0;
+  double _profitMonth = 0;
+  double _profitYear = 0;
 
   List<Product> get products => _products;
   List<Category> get categories => _categories;
@@ -24,7 +29,25 @@ class DashboardProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get chartData => _chartData;
   List<NotificationModel> get notifications => _notifications;
   List<UserModel> get staff => _staff;
+  List<Map<String, dynamic>> get restockHistory => _restockHistory;
+  Map<String, dynamic> get appSettings => _appSettings;
   int get selectedRevenuePeriod => _selectedRevenuePeriod;
+  double get profitToday => _profitToday;
+  double get profitMonth => _profitMonth;
+  double get profitYear => _profitYear;
+
+  double get selectedProfit {
+    switch (_selectedRevenuePeriod) {
+      case 1:
+        return profitMonth;
+      case 2:
+        return profitYear;
+      case 0:
+      default:
+        return profitToday;
+    }
+  }
+
   int get unreadNotificationCount =>
       _notifications.where((n) => !n.isRead).length;
   bool get isLoading => _isLoading;
@@ -90,6 +113,9 @@ class DashboardProvider extends ChangeNotifier {
         fetchTransactions(), // This will now trigger updateChartData
         fetchNotifications(),
         fetchStaff(),
+        fetchRestockHistory(),
+        syncAppSettings(),
+        fetchStats(),
       ]);
     } catch (e) {
       debugPrint('Error initializing data: $e');
@@ -99,12 +125,52 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchStats() async {
+    try {
+      final stats = await _api.getDashboardStats();
+      if (stats.containsKey('profit_today')) {
+        _profitToday = double.tryParse(stats['profit_today'].toString()) ?? 0.0;
+      }
+      if (stats.containsKey('profit_month')) {
+        _profitMonth = double.tryParse(stats['profit_month'].toString()) ?? 0.0;
+      }
+      if (stats.containsKey('profit_year')) {
+        _profitYear = double.tryParse(stats['profit_year'].toString()) ?? 0.0;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching stats: $e');
+    }
+  }
+
   Future<void> fetchProducts() async {
     try {
       _products = await _api.getProducts();
+      _checkLowStock();
       notifyListeners();
     } catch (e) {
       debugPrint('Error fetching products: $e');
+    }
+  }
+
+  void _checkLowStock() {
+    for (var product in _products) {
+      if (product.stock <= 5) {
+        final notificationId = 'low_stock_${product.id}';
+        // Check if notification already exists to avoid duplication
+        if (!_notifications.any((n) => n.id == notificationId)) {
+          final lowStockNotif = NotificationModel(
+            id: notificationId,
+            title: 'Stok Menipis!',
+            message: 'Stok ${product.name} tinggal ${product.stock} unit.',
+            type: 'stock',
+            isRead: false,
+            createdAt: DateTime.now(),
+          );
+          _notifications.insert(0, lowStockNotif);
+        }
+        debugPrint('STOK TIPIS: ${product.name}');
+      }
     }
   }
 
@@ -332,6 +398,54 @@ class DashboardProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('Error deleting staff: $e');
+      return false;
+    }
+  }
+
+  // Restock logic
+  Future<void> fetchRestockHistory() async {
+    try {
+      _restockHistory = await _api.getRestockHistory();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching restock history: $e');
+    }
+  }
+
+  Future<bool> addRestock(Map<String, dynamic> data) async {
+    try {
+      final success = await _api.addRestockHistory(data);
+      if (success) {
+        await Future.wait([fetchProducts(), fetchRestockHistory()]);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error adding restock: $e');
+      return false;
+    }
+  }
+
+  // Settings logic
+  Future<void> syncAppSettings() async {
+    try {
+      _appSettings = await _api.getAppSettings();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error syncing settings: $e');
+    }
+  }
+
+  Future<bool> updateStoreSettings(Map<String, dynamic> settings) async {
+    try {
+      final success = await _api.updateAppSettings(settings);
+      if (success) {
+        await syncAppSettings();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating settings: $e');
       return false;
     }
   }

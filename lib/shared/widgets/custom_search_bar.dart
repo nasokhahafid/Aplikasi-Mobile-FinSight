@@ -6,11 +6,14 @@ class CustomSearchBar extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextEditingController? controller;
 
+  final VoidCallback? onScannerPressed;
+
   const CustomSearchBar({
     super.key,
     this.hintText = 'Cari...',
     this.onChanged,
     this.controller,
+    this.onScannerPressed,
   });
 
   @override
@@ -35,6 +38,13 @@ class CustomSearchBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: AppColors.accent, width: 2),
         ),
+        suffixIcon: onScannerPressed != null
+            ? IconButton(
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                onPressed: onScannerPressed,
+                color: AppColors.primary,
+              )
+            : null,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 12,

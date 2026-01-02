@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../core/models/product_model.dart';
-import '../../../core/providers/dashboard_provider.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../shared/widgets/custom_search_bar.dart';
-import '../../../shared/widgets/product_card.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/models/product_model.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
+import 'package:finsight/core/utils/currency_formatter.dart';
+import 'package:finsight/shared/widgets/custom_search_bar.dart';
+import 'package:finsight/shared/widgets/product_card.dart';
 
 class ProdukScreen extends StatefulWidget {
   const ProdukScreen({super.key});

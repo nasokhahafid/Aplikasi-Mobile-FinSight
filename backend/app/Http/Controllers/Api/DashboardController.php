@@ -23,6 +23,9 @@ class DashboardController extends Controller
             'transaction_count_today' => $txnToday,
             'total_products' => $totalProducts,
             'low_stock_count' => $lowStock,
+            'profit_today' => $this->calculateProfit($today),
+            'profit_month' => $this->calculateProfit(now()->startOfMonth()),
+            'profit_year' => $this->calculateProfit(now()->startOfYear()),
         ]);
     }
 
@@ -42,5 +45,21 @@ class DashboardController extends Controller
         }
 
         return response()->json($data);
+    }
+    private function calculateProfit($date)
+    {
+        // Revenue (Real sales amount)
+        $revenue = Transaction::where('date', '>=', $date)->sum('total_amount');
+
+        // Cost of Goods Sold (Modal)
+        // Filter items based on the SAME transaction query logic
+        $cogs = \App\Models\TransactionItem::whereHas('transaction', function ($query) use ($date) {
+            $query->where('date', '>=', $date);
+        })->get()->sum(function ($item) {
+            return $item->buy_price * $item->quantity;
+        });
+
+        // Net Profit = Revenue - Cost
+        return $revenue - $cogs;
     }
 }

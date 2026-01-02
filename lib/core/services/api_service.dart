@@ -3,11 +3,11 @@ import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/product_model.dart';
-import '../models/transaction_model.dart';
-import '../models/category_model.dart';
-import '../models/notification_model.dart';
-import '../models/user_model.dart';
+import 'package:finsight/core/models/product_model.dart';
+import 'package:finsight/core/models/transaction_model.dart';
+import 'package:finsight/core/models/category_model.dart';
+import 'package:finsight/core/models/notification_model.dart';
+import 'package:finsight/core/models/user_model.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -426,5 +426,113 @@ class ApiService {
           },
         )
         .timeout(_timeout);
+  }
+
+  Future<Map<String, dynamic>> exportData() async {
+    final token = await getToken();
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/settings/export'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Gagal ekspor data.');
+  }
+
+  Future<bool> importData(Map<String, dynamic> data) async {
+    final token = await getToken();
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/settings/import'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode({'data': data}),
+        )
+        .timeout(_timeout);
+
+    return response.statusCode == 200;
+  }
+
+  // Restock History
+  Future<List<Map<String, dynamic>>> getRestockHistory() async {
+    final token = await getToken();
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/restock-history'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  Future<bool> addRestockHistory(Map<String, dynamic> data) async {
+    final token = await getToken();
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/restock-history'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode(data),
+        )
+        .timeout(_timeout);
+
+    return response.statusCode == 201;
+  }
+
+  // App Settings (Sync)
+  Future<Map<String, dynamic>> getAppSettings() async {
+    final token = await getToken();
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/settings'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return {};
+  }
+
+  Future<bool> updateAppSettings(Map<String, dynamic> settings) async {
+    final token = await getToken();
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/settings'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: jsonEncode({'settings': settings}),
+        )
+        .timeout(_timeout);
+
+    return response.statusCode == 200;
   }
 }

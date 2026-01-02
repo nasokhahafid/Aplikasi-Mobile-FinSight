@@ -6,8 +6,8 @@ import 'package:open_file/open_file.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart'
     hide Column, Row; // Hide to avoid conflict with Flutter widgets
 import 'package:table_calendar/table_calendar.dart';
-import '../models/transaction_model.dart';
-import '../models/event_model.dart';
+import 'package:finsight/core/models/transaction_model.dart';
+import 'package:finsight/core/models/event_model.dart';
 
 class ReportProvider extends ChangeNotifier {
   List<TransactionModel> _allTransactions = [];
@@ -157,7 +157,7 @@ class ReportProvider extends ChangeNotifier {
     for (var trx in monthTransactions) {
       revenue += trx.totalAmount;
       for (var item in trx.items) {
-        capital += (item.product.purchasePrice * item.quantity);
+        capital += (item.buyPrice * item.quantity);
         itemsCount += item.quantity;
       }
     }
@@ -180,17 +180,28 @@ class ReportProvider extends ChangeNotifier {
     sheet.getRangeByName('A1').setText('ID Transaksi');
     sheet.getRangeByName('B1').setText('Tanggal');
     sheet.getRangeByName('C1').setText('Total');
-    sheet.getRangeByName('D1').setText('Metode Pembayaran');
+    sheet.getRangeByName('D1').setText('Modal');
+    sheet.getRangeByName('E1').setText('Keuntungan');
+    sheet.getRangeByName('F1').setText('Metode Pembayaran');
 
     // Data
     for (int i = 0; i < _filteredTransactions.length; i++) {
-      final item = _filteredTransactions[i];
-      sheet.getRangeByName('A${i + 2}').setText(item.id);
+      final trx = _filteredTransactions[i];
+
+      double capital = 0;
+      for (var item in trx.items) {
+        capital += (item.buyPrice * item.quantity);
+      }
+      final profit = trx.totalAmount - capital;
+
+      sheet.getRangeByName('A${i + 2}').setText(trx.id);
       sheet
           .getRangeByName('B${i + 2}')
-          .setText(DateFormat('yyyy-MM-dd HH:mm').format(item.date));
-      sheet.getRangeByName('C${i + 2}').setNumber(item.totalAmount);
-      sheet.getRangeByName('D${i + 2}').setText(item.paymentMethod);
+          .setText(DateFormat('yyyy-MM-dd HH:mm').format(trx.date));
+      sheet.getRangeByName('C${i + 2}').setNumber(trx.totalAmount);
+      sheet.getRangeByName('D${i + 2}').setNumber(capital);
+      sheet.getRangeByName('E${i + 2}').setNumber(profit);
+      sheet.getRangeByName('F${i + 2}').setText(trx.paymentMethod);
     }
 
     final List<int> bytes = workbook.saveAsStream();

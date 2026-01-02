@@ -13,7 +13,7 @@ FinSight adalah aplikasi **Point of Sale (POS)** dan **Manajemen Keuangan** cerd
 
 ### 1. 📊 Dashboard Analitik
 
-- **Statistik Real-time**: Visualisasi total pendapatan, jumlah transaksi, dan total produk harian.
+- **Statistik Real-time**: Visualisasi total pendapatan, **keuntungan bersih (profit)**, jumlah transaksi, dan total produk harian.
 - **Menu Sirkular Modern**: Layout navigasi yang dinamis dan futuristik untuk akses cepat ke semua fitur.
 - **Greeting Personal**: Interface yang ramah dengan sambutan berbasis waktu dan format tanggal lokal.
 
@@ -21,6 +21,7 @@ FinSight adalah aplikasi **Point of Sale (POS)** dan **Manajemen Keuangan** cerd
 
 - **Katalog Interaktif**: Tampilan grid produk profesional dengan dukungan kategori dan pencarian instan.
 - **Smart Shopping Cart**: Manajemen keranjang belanja yang responsif dengan kalkulasi total otomatis.
+- **Cetak Struk Fisik**: Integrasi langsung dengan **Bluetooth Thermal Printer** untuk mencetak bukti transaksi.
 - **Hybrid Payment**: Mendukung metode pembayaran Tunai (Cash), QRIS, dan E-Wallet.
 - **Sync Stok Otomatis**: Integrasi langsung antara transaksi dan pengurangan stok barang di database.
 
@@ -33,6 +34,8 @@ FinSight adalah aplikasi **Point of Sale (POS)** dan **Manajemen Keuangan** cerd
 ### 4. 📈 Laporan & Riwayat
 
 - **Graphic Insights**: Grafik performa penjualan 7 hari terakhir yang interaktif menggunakan `fl_chart`.
+- **Analisis Mendalam**: Laporan detail mencakup Modal, Omzet, dan Keuntungan Bersih.
+- **Export Data**: Dukungan export laporan ke format **Excel (.xlsx)** dan **PDF** siap cetak.
 - **Riwayat Lengkap**: Pencatatan riwayat transaksi mendetail mulai dari jam, item terjual, hingga metode pembayaran.
 - **Localization**: Dukungan penuh format Mata Uang Rupiah (IDR) dan Bahasa Indonesia.
 
@@ -113,10 +116,9 @@ lib/
 - [x] Integrasi Real-time Dashboard & Stats.
 - [x] Upload Gambar Produk ke Cloud/Server.
 - [x] Sistem Kasir Terintegrasi Stok.
-- [ ] ⏳ **Next**: Export Laporan ke Excel & PDF.
-- [ ] ⏳ **Next**: Implementasi Cetak Struk via Bluetooth Printer.
-- [ ] ⏳ **Next**: Notifikasi Push untuk Laporan Harian.
-
+- [x] Export Laporan ke Excel & PDF.
+- [x] Implementasi Cetak Struk via Bluetooth Printer.
+- [x] Analisis Keuntungan/Laba Bersih.
 
 ---
 

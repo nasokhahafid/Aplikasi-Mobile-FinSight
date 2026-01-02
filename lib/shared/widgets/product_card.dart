@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_design_system.dart';
-import '../../core/models/product_model.dart';
-import '../../core/utils/currency_formatter.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/models/product_model.dart';
+import 'package:finsight/core/utils/currency_formatter.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -33,7 +33,7 @@ class ProductCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.xl),
               border: Border.all(
                 color: isOutOfStock
-                    ? AppColors.error.withOpacity(0.3)
+                    ? AppColors.error.withValues(alpha: 0.3)
                     : AppColors.borderLight,
                 width: isOutOfStock ? 2 : 1,
               ),
@@ -225,7 +225,7 @@ class ProductCard extends StatelessWidget {
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppRadius.xl),
                       ),
                       child: Center(

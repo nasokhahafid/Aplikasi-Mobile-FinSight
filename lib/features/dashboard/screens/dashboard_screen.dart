@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../core/providers/dashboard_provider.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../shared/widgets/dashboard_widgets.dart';
-import '../../kasir/screens/kasir_screen.dart';
-import '../../produk/screens/produk_screen.dart';
-import '../../stok/screens/stok_screen.dart';
-import '../../laporan/screens/laporan_screen.dart';
-import '../../staff/screens/staff_screen.dart';
-import '../../pengaturan/screens/pengaturan_screen.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
+import 'package:finsight/core/utils/currency_formatter.dart';
+import 'package:finsight/shared/widgets/dashboard_widgets.dart';
+import 'package:finsight/core/services/notification_service.dart';
+import 'package:finsight/features/kasir/screens/kasir_screen.dart';
+import 'package:finsight/features/produk/screens/produk_screen.dart';
+import 'package:finsight/features/stok/screens/stok_screen.dart';
+import 'package:finsight/features/laporan/screens/laporan_screen.dart';
+import 'package:finsight/features/staff/screens/staff_screen.dart';
+import 'package:finsight/features/pengaturan/screens/pengaturan_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,6 +41,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
 
     _animationController.forward();
+    _scheduleDailyReport();
+  }
+
+  void _scheduleDailyReport() {
+    NotificationService.scheduleDailyReportNotification(
+      hour: 21,
+      minute: 0,
+      title: 'Laporan Penjualan Hari Ini',
+      body: 'Waktunya cek omzet hari ini! Klik untuk melihat performa tokomu.',
+    );
   }
 
   Future<void> _loadProfile() async {
@@ -273,6 +284,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           const Divider(height: AppSpacing.xl),
 
+                          // Profit Item
+                          SummaryItem(
+                            icon: Icons.monetization_on_rounded,
+                            iconColor: AppColors.success,
+                            iconBgColor: AppColors.success.withOpacity(0.1),
+                            title: service.selectedRevenuePeriod == 0
+                                ? 'Keuntungan (Hari Ini)'
+                                : service.selectedRevenuePeriod == 1
+                                ? 'Keuntungan (Bulan Ini)'
+                                : 'Keuntungan (Tahun Ini)',
+                            value: CurrencyFormatter.format(
+                              service.selectedProfit,
+                            ),
+                            subtitle: service.selectedRevenuePeriod == 0
+                                ? 'Margin bersih dari transaksi hari ini'
+                                : service.selectedRevenuePeriod == 1
+                                ? 'Margin bersih bulan ini'
+                                : 'Margin bersih tahun ini',
+                            subtitleColor: AppColors.textSecondary,
+                          ),
+                          const Divider(height: AppSpacing.xl),
+
                           // Row for Transaksi and Produk
                           Row(
                             children: [
@@ -491,7 +524,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 class _NotificationSheet extends StatelessWidget {
   final DashboardProvider service;
 
-  const _NotificationSheet({super.key, required this.service});
+  const _NotificationSheet({required this.service});
 
   @override
   Widget build(BuildContext context) {

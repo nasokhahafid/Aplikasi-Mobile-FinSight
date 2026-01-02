@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../shared/widgets/custom_button.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/shared/widgets/custom_button.dart';
+import 'package:finsight/features/dashboard/screens/dashboard_screen.dart';
 import 'package:provider/provider.dart';
-import '../../../core/services/api_service.dart';
-import '../../../core/providers/dashboard_provider.dart';
+import 'package:finsight/core/services/api_service.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

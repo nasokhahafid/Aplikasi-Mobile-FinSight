@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../core/providers/dashboard_provider.dart';
-import '../../../core/providers/report_provider.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/models/transaction_model.dart';
-import '../../../core/models/event_model.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
+import 'package:finsight/core/providers/report_provider.dart';
+import 'package:finsight/core/utils/currency_formatter.dart';
+import 'package:finsight/core/models/transaction_model.dart';
+import 'package:finsight/core/models/event_model.dart';
+import 'package:finsight/core/services/export_service.dart';
+import 'package:finsight/core/services/printer_service.dart';
 
 class LaporanScreen extends StatelessWidget {
   const LaporanScreen({super.key});
@@ -138,11 +140,27 @@ class _LaporanScreenContentState extends State<_LaporanScreenContent> {
           ),
           IconButton(
             tooltip: 'Export Excel',
-            icon: const Icon(Icons.file_download_outlined),
+            icon: const Icon(Icons.table_view_rounded),
             onPressed: () {
               report.exportToExcel();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mengexport laporan...')),
+                const SnackBar(content: Text('Mengexport ke Excel...')),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Export PDF',
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            onPressed: () {
+              final stats = report.getMonthlyClosingStats();
+              ExportService.exportToPdf(
+                transactions: report.transactions,
+                title:
+                    'Laporan Periode ${DateFormat('dd MMM yyyy').format(report.rangeStart ?? DateTime.now())}',
+                stats: stats,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Menyiapkan dokumen PDF...')),
               );
             },
           ),
@@ -585,13 +603,21 @@ class _LaporanScreenContentState extends State<_LaporanScreenContent> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.print),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Printing... (Simulated)'),
-                        ),
-                      );
+                    onPressed: () async {
+                      final printer = PrinterService();
+                      final devices = await printer.getDevices();
+                      if (devices.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Tidak ada printer bluetooth terhubung',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      await printer.connect(devices.first);
+                      await printer.printReceipt(trx);
                     },
                   ),
                 ],

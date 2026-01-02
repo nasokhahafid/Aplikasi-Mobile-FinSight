@@ -20,9 +20,11 @@ class ProductController extends Controller
             'name' => 'required|string',
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric',
+            'purchase_price' => 'nullable|numeric',
             'stock' => 'required|integer',
             'description' => 'nullable|string',
-            'image' => 'nullable|file|image|max:2048', // Allow file upload
+            'barcode' => 'nullable|string|unique:products,barcode',
+            'image' => 'nullable|file|image|max:2048',
         ]);
 
         if ($request->hasFile('image')) {
@@ -38,14 +40,22 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        $data = $request->all();
+        $validated = $request->validate([
+            'name' => 'sometimes|string',
+            'category_id' => 'sometimes|nullable|exists:categories,id',
+            'price' => 'sometimes|numeric',
+            'purchase_price' => 'sometimes|numeric',
+            'stock' => 'sometimes|integer',
+            'barcode' => 'sometimes|nullable|string|unique:products,barcode,' . $id,
+            'description' => 'sometimes|nullable|string',
+        ]);
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('products', 'public');
-            $data['image'] = asset('storage/' . $path);
+            $validated['image'] = asset('storage/' . $path);
         }
 
-        $product->update($data);
+        $product->update($validated);
         return response()->json($product);
     }
 

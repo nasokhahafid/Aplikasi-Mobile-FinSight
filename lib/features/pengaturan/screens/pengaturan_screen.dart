@@ -1,7 +1,16 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../auth/screens/login_screen.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
+import 'package:finsight/core/providers/theme_provider.dart';
+import 'package:finsight/core/services/api_service.dart';
+import 'package:finsight/features/auth/screens/login_screen.dart';
 
 class PengaturanScreen extends StatefulWidget {
   const PengaturanScreen({super.key});
@@ -11,7 +20,6 @@ class PengaturanScreen extends StatefulWidget {
 }
 
 class _PengaturanScreenState extends State<PengaturanScreen> {
-  bool _isDarkMode = false;
   bool _isNotificationEnabled = true;
   String _printerStatus = 'Belum terhubung';
   String _storeName = 'Toko FinSight';
@@ -25,12 +33,21 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final dashboard = Provider.of<DashboardProvider>(context, listen: false);
+
     setState(() {
-      _isDarkMode = prefs.getBool('darkMode') ?? false;
       _isNotificationEnabled = prefs.getBool('notifications') ?? true;
       _printerStatus = prefs.getString('printer') ?? 'Belum terhubung';
-      _storeName = prefs.getString('storeName') ?? 'Toko FinSight';
-      _ownerName = prefs.getString('ownerName') ?? 'Owner';
+
+      // Use settings from provider if available
+      _storeName =
+          dashboard.appSettings['store_name'] ??
+          prefs.getString('storeName') ??
+          'Toko FinSight';
+      _ownerName =
+          dashboard.appSettings['owner_name'] ??
+          prefs.getString('ownerName') ??
+          'Owner';
     });
   }
 
@@ -43,8 +60,102 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     }
   }
 
+  Future<void> _backupData() async {
+    try {
+      final api = ApiService();
+      final data = await api.exportData();
+      final jsonString = jsonEncode(data);
+
+      final directory = await getTemporaryDirectory();
+      final file = File(
+        '${directory.path}/FinSight_Backup_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
+      await file.writeAsString(jsonString);
+
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Backup Data FinSight - ${DateTime.now().toString()}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal backup: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreData() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null) {
+        final file = File(result.files.single.path!);
+        final content = await file.readAsString();
+        final data = jsonDecode(content);
+
+        if (data['data'] == null) {
+          throw Exception('Format file backup tidak valid');
+        }
+
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Restore Data'),
+            content: const Text(
+              'Tindakan ini akan menimpa data saat ini. Lanjutkan?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Restore'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true) {
+          final api = ApiService();
+          final success = await api.importData(data['data']);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  success
+                      ? 'Data berhasil dipulihkan'
+                      : 'Gagal memulihkan data',
+                ),
+                backgroundColor: success ? AppColors.success : AppColors.error,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal restore: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final dashboard = context.watch<DashboardProvider>();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -108,6 +219,18 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (dashboard.appSettings['store_address'] != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            dashboard.appSettings['store_address'],
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -127,18 +250,17 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
               title: 'Tampilan & Aplikasi',
               children: [
                 _SettingsTile(
-                  icon: _isDarkMode
+                  icon: themeProvider.isDarkMode
                       ? Icons.dark_mode_rounded
                       : Icons.light_mode_rounded,
                   title: 'Mode Gelap',
-                  subtitle: _isDarkMode ? 'Aktif' : 'Nonaktif',
+                  subtitle: themeProvider.isDarkMode ? 'Aktif' : 'Nonaktif',
                   trailing: Switch.adaptive(
-                    value: _isDarkMode,
+                    value: themeProvider.isDarkMode,
                     onChanged: (value) {
-                      setState(() => _isDarkMode = value);
-                      _saveSetting('darkMode', value);
+                      themeProvider.toggleTheme(value);
                     },
-                    activeColor: AppColors.primary,
+                    activeColor: AppColors.secondary,
                   ),
                 ),
                 _SettingsTile(
@@ -179,6 +301,24 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   title: 'Scanner Barcode',
                   subtitle: 'Kamera Bawaan',
                   onTap: () {},
+                ),
+              ],
+            ),
+
+            _SettingsGroup(
+              title: 'Data & Keamanan',
+              children: [
+                _SettingsTile(
+                  icon: Icons.backup_rounded,
+                  title: 'Backup Data',
+                  subtitle: 'Simpan data ke file JSON',
+                  onTap: _backupData,
+                ),
+                _SettingsTile(
+                  icon: Icons.restore_rounded,
+                  title: 'Restore Data',
+                  subtitle: 'Pulihkan data dari file backup',
+                  onTap: _restoreData,
                 ),
               ],
             ),
@@ -242,26 +382,38 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   }
 
   void _showEditProfileDialog(BuildContext context) {
+    final dashboard = Provider.of<DashboardProvider>(context, listen: false);
     final storeController = TextEditingController(text: _storeName);
     final ownerController = TextEditingController(text: _ownerName);
+    final addressController = TextEditingController(
+      text: dashboard.appSettings['store_address'] ?? '',
+    );
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit Profil Toko'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: storeController,
-              decoration: const InputDecoration(labelText: 'Nama Toko'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ownerController,
-              decoration: const InputDecoration(labelText: 'Nama Pemilik'),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: storeController,
+                decoration: const InputDecoration(labelText: 'Nama Toko'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ownerController,
+                decoration: const InputDecoration(labelText: 'Nama Pemilik'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: addressController,
+                decoration: const InputDecoration(labelText: 'Alamat Toko'),
+                maxLines: 2,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -269,14 +421,27 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              final newStoreName = storeController.text;
+              final newOwnerName = ownerController.text;
+              final newAddress = addressController.text;
+
               setState(() {
-                _storeName = storeController.text;
-                _ownerName = ownerController.text;
+                _storeName = newStoreName;
+                _ownerName = newOwnerName;
               });
+
               _saveSetting('storeName', _storeName);
               _saveSetting('ownerName', _ownerName);
-              Navigator.pop(context);
+
+              // Update to Server
+              await dashboard.updateStoreSettings({
+                'store_name': newStoreName,
+                'owner_name': newOwnerName,
+                'store_address': newAddress,
+              });
+
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text('Simpan'),
           ),

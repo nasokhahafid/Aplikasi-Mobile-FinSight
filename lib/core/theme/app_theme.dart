@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../constants/app_design_system.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
@@ -254,6 +254,81 @@ class AppTheme {
         color: AppColors.divider,
         thickness: 1,
         space: 1,
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
+      primaryColor: const Color(0xFF1E293B), // Slate 800
+
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        primary: const Color(0xFF3B82F6), // Blue 500
+        secondary: AppColors.secondary,
+        surface: const Color(0xFF1E293B), // Slate 800
+        onSurface: Colors.white,
+        error: AppColors.error,
+        brightness: Brightness.dark,
+      ),
+
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme)
+          .copyWith(
+            displayLarge: GoogleFonts.inter(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+            bodyLarge: GoogleFonts.inter(fontSize: 16, color: Colors.white),
+            bodyMedium: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
+          ),
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1E293B),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF1E293B),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderSide: const BorderSide(color: Color(0xFF334155), width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderSide: const BorderSide(color: Color(0xFF334155), width: 1.5),
+        ),
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF3B82F6),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+        ),
       ),
     );
   }

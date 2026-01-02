@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/app_design_system.dart';
-import '../../../core/providers/dashboard_provider.dart';
+import 'package:finsight/core/constants/app_design_system.dart';
+import 'package:finsight/core/providers/dashboard_provider.dart';
 
 class StokScreen extends StatelessWidget {
   const StokScreen({super.key});
@@ -20,9 +20,7 @@ class StokScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
-            onPressed: () {
-              // History placeholder
-            },
+            onPressed: () => _showHistoryDialog(context, service),
           ),
           const SizedBox(width: AppSpacing.sm),
         ],
@@ -154,12 +152,9 @@ class StokScreen extends StatelessWidget {
                       ],
                     ),
                     onTap: () async {
-                      final result = await showDialog<int>(
+                      final result = await showDialog<Map<String, dynamic>>(
                         context: context,
-                        builder: (context) => _EditStockDialog(
-                          productName: product.name,
-                          currentStock: product.stock,
-                        ),
+                        builder: (context) => _RestockDialog(product: product),
                       );
 
                       if (result != null && context.mounted) {
@@ -191,10 +186,13 @@ class StokScreen extends StatelessWidget {
                         );
 
                         // Update stock
-                        final success = await service.updateProductStock(
-                          product.id,
-                          result,
-                        );
+                        // Update stock via Restock History API
+                        final success = await service.addRestock({
+                          'product_id': product.id,
+                          'quantity': result['quantity'],
+                          'purchase_price': result['purchase_price'],
+                          'notes': result['notes'],
+                        });
 
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -229,66 +227,161 @@ class StokScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showHistoryDialog(BuildContext context, DashboardProvider service) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                children: [
+                  const Text(
+                    'Riwayat Restock',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: service.restockHistory.isEmpty
+                  ? const Center(child: Text('Belum ada riwayat restock'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      itemCount: service.restockHistory.length,
+                      itemBuilder: (context, index) {
+                        final h = service.restockHistory[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: AppColors.primaryLight,
+                              child: Icon(
+                                Icons.add_shopping_cart,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            title: Text(h['product']['name']),
+                            subtitle: Text('${h['notes'] ?? '-'}'),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '+${h['quantity']}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.success,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  '${DateTime.parse(h['created_at']).day}/${DateTime.parse(h['created_at']).month}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _EditStockDialog extends StatefulWidget {
-  final String productName;
-  final int currentStock;
+class _RestockDialog extends StatefulWidget {
+  final dynamic product;
 
-  const _EditStockDialog({
-    required this.productName,
-    required this.currentStock,
-  });
+  const _RestockDialog({required this.product});
 
   @override
-  State<_EditStockDialog> createState() => _EditStockDialogState();
+  State<_RestockDialog> createState() => _RestockDialogState();
 }
 
-class _EditStockDialogState extends State<_EditStockDialog> {
-  late TextEditingController _controller;
+class _RestockDialogState extends State<_RestockDialog> {
+  final _qtyController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _notesController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.currentStock.toString());
+    _priceController.text = widget.product.purchasePrice.toString();
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl2),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Update Stok',
+              'Input Stok Masuk',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: 8),
             Text(
-              widget.productName,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-              ),
+              widget.product.name,
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 20),
             TextField(
-              controller: _controller,
+              controller: _qtyController,
               keyboardType: TextInputType.number,
-              autofocus: true,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               decoration: const InputDecoration(
-                labelText: 'Jumlah Stok Baru',
-                prefixIcon: Icon(Icons.inventory_2_outlined),
+                labelText: 'Jumlah Masuk (Unit)',
+                prefixIcon: Icon(Icons.add_box_outlined),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl2),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _priceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Harga Beli per Unit (Rp)',
+                prefixIcon: Icon(Icons.payments_outlined),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _notesController,
+              decoration: const InputDecoration(
+                labelText: 'Catatan (Supplier, dsb)',
+                prefixIcon: Icon(Icons.note_alt_outlined),
+              ),
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -297,13 +390,19 @@ class _EditStockDialogState extends State<_EditStockDialog> {
                     child: const Text('Batal'),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      final newStock =
-                          int.tryParse(_controller.text) ?? widget.currentStock;
-                      Navigator.pop(context, newStock);
+                      final qty = int.tryParse(_qtyController.text) ?? 0;
+                      final price = double.tryParse(_priceController.text) ?? 0;
+                      if (qty > 0) {
+                        Navigator.pop(context, {
+                          'quantity': qty,
+                          'purchase_price': price,
+                          'notes': _notesController.text,
+                        });
+                      }
                     },
                     child: const Text('Simpan'),
                   ),
@@ -314,11 +413,5 @@ class _EditStockDialogState extends State<_EditStockDialog> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 }
